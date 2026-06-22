@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #061F3D;
+  --color-navySoft: #08284F;
+  --color-yellowBrand: #FFC400;
+  --color-confirmGreen: #16A34A;
+  --shadow-soft: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
