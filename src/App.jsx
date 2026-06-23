@@ -5,6 +5,7 @@ import ReportsPanel from "./pages/ReportsPanel";
 import DashboardPage from "./pages/DashboardPage";
 import OperatorPanel from "./pages/OperatorPanel";
 import CompaniesPanel from "./pages/CompaniesPanel";
+import RoutesPanel from "./pages/RoutesPanel";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
 import UsersPanel from "./pages/UsersPanel";
@@ -26,10 +27,7 @@ const managementRoles = [
   "ROLE_COMPANY_ADMIN"
 ];
 
-const adminOnlyRoles = [
-  "ADMIN",
-  "ROLE_ADMIN"
-];
+const adminOnlyRoles = ["ADMIN", "ROLE_ADMIN"];
 
 export default function App() {
   return (
@@ -58,6 +56,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={managementRoles} />}>
         <Route element={<AppLayout />}>
           <Route path="/empresas" element={<CompaniesPanel />} />
+          <Route path="/rotas" element={<RoutesPanel />} />
           <Route path="/relatorios" element={<ReportsPanel />} />
         </Route>
       </Route>

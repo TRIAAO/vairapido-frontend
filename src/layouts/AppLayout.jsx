@@ -6,7 +6,8 @@ import {
   ShieldCheck,
   Users,
   FileBarChart,
-  Building2
+  Building2,
+  Route as RouteIcon
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -27,10 +28,7 @@ const managementRoles = [
   "ROLE_COMPANY_ADMIN"
 ];
 
-const adminOnlyRoles = [
-  "ADMIN",
-  "ROLE_ADMIN"
-];
+const adminOnlyRoles = ["ADMIN", "ROLE_ADMIN"];
 
 const links = [
   {
@@ -55,6 +53,12 @@ const links = [
     label: "Empresas",
     path: "/empresas",
     icon: Building2,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Rotas",
+    path: "/rotas",
+    icon: RouteIcon,
     allowedRoles: managementRoles
   },
   {
@@ -107,7 +111,7 @@ export default function AppLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-2 px-4 py-6">
+        <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-6">
           {visibleLinks.map((item) => {
             const Icon = item.icon;
 
