@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import OperatorPanel from "./pages/OperatorPanel";
 import CompaniesPanel from "./pages/CompaniesPanel";
 import RoutesPanel from "./pages/RoutesPanel";
+import TripsPanel from "./pages/TripsPanel";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
 import UsersPanel from "./pages/UsersPanel";
@@ -57,6 +58,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/empresas" element={<CompaniesPanel />} />
           <Route path="/rotas" element={<RoutesPanel />} />
+          <Route path="/viagens" element={<TripsPanel />} />
           <Route path="/relatorios" element={<ReportsPanel />} />
         </Route>
       </Route>
