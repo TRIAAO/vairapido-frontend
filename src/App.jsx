@@ -5,20 +5,32 @@ import {
   CompaniesPanel,
   DashboardPage,
   OperatorPanel,
-  ReportsPanel,
-  UsersPanel
+  ReportsPanel
 } from "./pages/BackofficePages";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
+import UsersPanel from "./pages/UsersPanel";
 import { isAuthenticated } from "./utils/auth";
 
-const allowedBackofficeRoles = [
+const allBackofficeRoles = [
   "ADMIN",
   "ROLE_ADMIN",
   "COMPANY_ADMIN",
   "ROLE_COMPANY_ADMIN",
   "OPERATOR",
   "ROLE_OPERATOR"
+];
+
+const managementRoles = [
+  "ADMIN",
+  "ROLE_ADMIN",
+  "COMPANY_ADMIN",
+  "ROLE_COMPANY_ADMIN"
+];
+
+const adminOnlyRoles = [
+  "ADMIN",
+  "ROLE_ADMIN"
 ];
 
 export default function App() {
@@ -28,7 +40,7 @@ export default function App() {
         path="/"
         element={
           isAuthenticated() ? (
-            <Navigate to="/fiscal" replace />
+            <Navigate to="/dashboard" replace />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -37,14 +49,24 @@ export default function App() {
 
       <Route path="/login" element={<Login />} />
 
-      <Route element={<ProtectedRoute allowedRoles={allowedBackofficeRoles} />}>
+      <Route element={<ProtectedRoute allowedRoles={allBackofficeRoles} />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/fiscal" element={<FiscalPanel />} />
           <Route path="/operador" element={<OperatorPanel />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={managementRoles} />}>
+        <Route element={<AppLayout />}>
           <Route path="/empresas" element={<CompaniesPanel />} />
-          <Route path="/usuarios" element={<UsersPanel />} />
           <Route path="/relatorios" element={<ReportsPanel />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={adminOnlyRoles} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/usuarios" element={<UsersPanel />} />
         </Route>
       </Route>
 

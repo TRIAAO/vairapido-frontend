@@ -11,18 +11,80 @@ import {
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
 
-const links = [
-  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { label: "Fiscal", path: "/fiscal", icon: ShieldCheck },
-  { label: "Operador", path: "/operador", icon: ClipboardCheck },
-  { label: "Empresas", path: "/empresas", icon: Building2 },
-  { label: "Usuários", path: "/usuarios", icon: Users },
-  { label: "Relatórios", path: "/relatorios", icon: FileBarChart }
+const allBackofficeRoles = [
+  "ADMIN",
+  "ROLE_ADMIN",
+  "COMPANY_ADMIN",
+  "ROLE_COMPANY_ADMIN",
+  "OPERATOR",
+  "ROLE_OPERATOR"
 ];
+
+const managementRoles = [
+  "ADMIN",
+  "ROLE_ADMIN",
+  "COMPANY_ADMIN",
+  "ROLE_COMPANY_ADMIN"
+];
+
+const adminOnlyRoles = [
+  "ADMIN",
+  "ROLE_ADMIN"
+];
+
+const links = [
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: LayoutDashboard,
+    allowedRoles: allBackofficeRoles
+  },
+  {
+    label: "Fiscal",
+    path: "/fiscal",
+    icon: ShieldCheck,
+    allowedRoles: allBackofficeRoles
+  },
+  {
+    label: "Operador",
+    path: "/operador",
+    icon: ClipboardCheck,
+    allowedRoles: allBackofficeRoles
+  },
+  {
+    label: "Empresas",
+    path: "/empresas",
+    icon: Building2,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Usuários",
+    path: "/usuarios",
+    icon: Users,
+    allowedRoles: adminOnlyRoles
+  },
+  {
+    label: "Relatórios",
+    path: "/relatorios",
+    icon: FileBarChart,
+    allowedRoles: managementRoles
+  }
+];
+
+function canAccess(userRole, allowedRoles = []) {
+  if (!userRole) {
+    return false;
+  }
+
+  return allowedRoles.includes(userRole);
+}
 
 export default function AppLayout() {
   const navigate = useNavigate();
   const user = getCurrentUser();
+  const visibleLinks = links.filter((item) =>
+    canAccess(user?.role, item.allowedRoles)
+  );
 
   function handleLogout() {
     logout();
@@ -46,7 +108,7 @@ export default function AppLayout() {
         </div>
 
         <nav className="flex-1 space-y-2 px-4 py-6">
-          {links.map((item) => {
+          {visibleLinks.map((item) => {
             const Icon = item.icon;
 
             return (
@@ -73,7 +135,7 @@ export default function AppLayout() {
           <div className="mb-4 rounded-2xl bg-white/10 p-4">
             <p className="text-xs font-bold uppercase text-blue-100">Usuário</p>
             <p className="mt-1 truncate text-sm font-black">
-              {user?.fullName || user?.email || "Fiscal"}
+              {user?.fullName || user?.email || "Usuário"}
             </p>
             <p className="mt-1 text-xs font-bold text-yellowBrand">
               {user?.role || "-"}
