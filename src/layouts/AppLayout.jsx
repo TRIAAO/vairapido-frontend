@@ -7,7 +7,8 @@ import {
   Users,
   FileBarChart,
   Building2,
-  Route as RouteIcon
+  Route as RouteIcon,
+  CalendarClock
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -62,6 +63,12 @@ const links = [
     allowedRoles: managementRoles
   },
   {
+    label: "Viagens",
+    path: "/viagens",
+    icon: CalendarClock,
+    allowedRoles: managementRoles
+  },
+  {
     label: "Usuários",
     path: "/usuarios",
     icon: Users,
@@ -96,7 +103,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-slate-100">
       <aside className="fixed left-0 top-0 z-30 hidden h-screen w-72 flex-col bg-navy text-white lg:flex">
         <div className="border-b border-white/10 px-6 py-6">
           <div className="flex items-center gap-3">
@@ -157,10 +164,10 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      <div className="lg:pl-72">
+      <div className="min-w-0 lg:pl-72">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 lg:px-8">
-            <div>
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 lg:px-8">
+            <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wide text-slate-500">
                 Sistema VaiRápido
               </p>
@@ -179,7 +186,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-5 py-8 lg:px-8">
+        <main className="mx-auto w-full max-w-6xl px-5 py-8 lg:px-8">
           <Outlet />
         </main>
       </div>
