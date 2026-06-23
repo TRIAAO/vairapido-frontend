@@ -2,11 +2,11 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
 import {
-  CompaniesPanel,
   DashboardPage,
   OperatorPanel,
   ReportsPanel
 } from "./pages/BackofficePages";
+import CompaniesPanel from "./pages/CompaniesPanel";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
 import UsersPanel from "./pages/UsersPanel";
