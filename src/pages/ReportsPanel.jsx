@@ -169,6 +169,26 @@ function getItemDate(item) {
   );
 }
 
+function getDateOnly(value) {
+  if (!value || value === "-") {
+    return "";
+  }
+
+  const text = String(value);
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
+    return text.slice(0, 10);
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
 function csvEscape(value) {
   if (value === null || value === undefined) {
     return "";
@@ -266,7 +286,7 @@ function MetricCard({ title, value, description, icon: Icon, tone = "navy" }) {
         </div>
 
         <div
-          className={`grid h-13 w-13 place-items-center rounded-2xl ${tones[tone]}`}
+          className={`grid h-14 w-14 place-items-center rounded-2xl ${tones[tone]}`}
         >
           <Icon size={26} strokeWidth={2.8} />
         </div>
@@ -351,6 +371,8 @@ export default function ReportsPanel() {
   const [companyFilter, setCompanyFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -370,6 +392,23 @@ export default function ReportsPanel() {
 
     return Array.from(new Set(statuses)).sort((a, b) => a.localeCompare(b));
   }, [bookings, tickets, trips]);
+
+  function matchesPeriodFilter(item) {
+    if (!startDate && !endDate) {
+      return true;
+    }
+
+    const itemDate = getDateOnly(getItemDate(item));
+
+    if (!itemDate) {
+      return false;
+    }
+
+    const afterStart = !startDate || itemDate >= startDate;
+    const beforeEnd = !endDate || itemDate <= endDate;
+
+    return afterStart && beforeEnd;
+  }
 
   function matchesCommonFilters(item) {
     const term = normalizeText(query);
@@ -396,7 +435,12 @@ export default function ReportsPanel() {
         .filter(Boolean)
         .some((value) => normalizeText(value).includes(term));
 
-    return matchesCompany && matchesStatus && matchesQuery;
+    return (
+      matchesCompany &&
+      matchesStatus &&
+      matchesQuery &&
+      matchesPeriodFilter(item)
+    );
   }
 
   const filteredTrips = useMemo(() => {
@@ -405,7 +449,15 @@ export default function ReportsPanel() {
     }
 
     return trips.filter((trip) => matchesCommonFilters(trip));
-  }, [trips, query, companyFilter, statusFilter, typeFilter]);
+  }, [
+    trips,
+    query,
+    companyFilter,
+    statusFilter,
+    typeFilter,
+    startDate,
+    endDate
+  ]);
 
   const filteredBookings = useMemo(() => {
     if (!["ALL", "BOOKINGS"].includes(typeFilter)) {
@@ -413,7 +465,15 @@ export default function ReportsPanel() {
     }
 
     return bookings.filter((booking) => matchesCommonFilters(booking));
-  }, [bookings, query, companyFilter, statusFilter, typeFilter]);
+  }, [
+    bookings,
+    query,
+    companyFilter,
+    statusFilter,
+    typeFilter,
+    startDate,
+    endDate
+  ]);
 
   const filteredTickets = useMemo(() => {
     if (!["ALL", "TICKETS", "BOARDINGS"].includes(typeFilter)) {
@@ -427,7 +487,15 @@ export default function ReportsPanel() {
     }
 
     return base;
-  }, [tickets, query, companyFilter, statusFilter, typeFilter]);
+  }, [
+    tickets,
+    query,
+    companyFilter,
+    statusFilter,
+    typeFilter,
+    startDate,
+    endDate
+  ]);
 
   const report = useMemo(() => {
     const validTickets = filteredTickets.filter(
@@ -559,6 +627,8 @@ export default function ReportsPanel() {
     setCompanyFilter("ALL");
     setStatusFilter("ALL");
     setTypeFilter("ALL");
+    setStartDate("");
+    setEndDate("");
   }
 
   function handleExportCsv() {
@@ -686,9 +756,9 @@ export default function ReportsPanel() {
               <p className="text-xs font-black uppercase text-blue-100">
                 Módulo
               </p>
-              <p className="mt-1 text-3xl font-black text-yellowBrand">59</p>
+              <p className="mt-1 text-3xl font-black text-yellowBrand">60</p>
               <p className="text-sm font-bold text-white">
-                Filtros e CSV
+                Período e CSV
               </p>
             </div>
           </div>
@@ -724,12 +794,12 @@ export default function ReportsPanel() {
                   </div>
 
                   <h2 className="text-2xl font-black text-navy">
-                    Filtros e exportação
+                    Filtros, período e exportação
                   </h2>
 
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                    Refine os relatórios por empresa, status, tipo e busca
-                    textual.
+                    Refine os relatórios por período, empresa, status, tipo e
+                    busca textual.
                   </p>
                 </div>
 
@@ -823,10 +893,44 @@ export default function ReportsPanel() {
                 </label>
               </div>
 
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-black text-navy">
+                    Data inicial
+                  </span>
+
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    className="min-h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-navy outline-none focus:border-navy focus:ring-4 focus:ring-navy/10"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-black text-navy">
+                    Data final
+                  </span>
+
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    className="min-h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-navy outline-none focus:border-navy focus:ring-4 focus:ring-navy/10"
+                  />
+                </label>
+              </div>
+
               <div className="rounded-2xl bg-slate-50 px-5 py-4 text-sm font-bold text-slate-600">
                 Resultado filtrado: {filteredTrips.length} viagens ·{" "}
                 {filteredBookings.length} reservas · {filteredTickets.length}{" "}
                 bilhetes
+                {(startDate || endDate) && (
+                  <span>
+                    {" "}
+                    · Período: {startDate || "início"} até {endDate || "hoje"}
+                  </span>
+                )}
               </div>
             </div>
           </section>
@@ -965,8 +1069,8 @@ export default function ReportsPanel() {
                 </h3>
 
                 <p className="mt-1 text-sm font-semibold leading-6 text-blue-800">
-                  Podemos adicionar exportação PDF, gráfico visual e filtros por
-                  período.
+                  Podemos adicionar exportação PDF, gráficos visuais e resumo
+                  executivo para administração.
                 </p>
               </div>
             </div>
