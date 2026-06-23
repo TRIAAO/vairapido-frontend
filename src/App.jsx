@@ -1,9 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
-import {
-  ReportsPanel
-} from "./pages/BackofficePages";
+import ReportsPanel from "./pages/ReportsPanel";
 import DashboardPage from "./pages/DashboardPage";
 import OperatorPanel from "./pages/OperatorPanel";
 import CompaniesPanel from "./pages/CompaniesPanel";
