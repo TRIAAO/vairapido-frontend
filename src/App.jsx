@@ -3,9 +3,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
 import {
   DashboardPage,
-  OperatorPanel,
   ReportsPanel
 } from "./pages/BackofficePages";
+import OperatorPanel from "./pages/OperatorPanel";
 import CompaniesPanel from "./pages/CompaniesPanel";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
