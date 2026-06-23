@@ -9,6 +9,7 @@ import {
   FileBarChart,
   Filter,
   Loader2,
+  Printer,
   RefreshCw,
   Search,
   TicketCheck,
@@ -230,6 +231,15 @@ function downloadCsv(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function statusPill(status) {
   const normalized = normalizeStatus(status);
 
@@ -349,6 +359,201 @@ function ReportTable({ title, description, columns, rows, emptyText }) {
             )}
           </tbody>
         </table>
+      </div>
+    </section>
+  );
+}
+
+function SimpleBarList({ title, description, icon: Icon, rows, emptyText }) {
+  const maxValue = Math.max(...rows.map((row) => Number(row.value || 0)), 1);
+
+  return (
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-soft">
+      <div className="mb-6 flex items-start justify-between gap-5">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-navy/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-navy">
+            <Icon size={15} />
+            Gráfico
+          </div>
+
+          <h2 className="text-2xl font-black text-navy">{title}</h2>
+
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {rows.map((row) => {
+          const percent = Math.max(
+            4,
+            Math.round((Number(row.value || 0) / maxValue) * 100)
+          );
+
+          return (
+            <div key={row.label} className="grid gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-navy">
+                    {row.label}
+                  </p>
+
+                  {row.description && (
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      {row.description}
+                    </p>
+                  )}
+                </div>
+
+                <p className="shrink-0 text-sm font-black text-navy">
+                  {row.displayValue || row.value}
+                </p>
+              </div>
+
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-navy"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {rows.length === 0 && (
+          <div className="rounded-2xl bg-slate-50 p-6 text-center text-sm font-black text-slate-500">
+            {emptyText}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SummaryGauge({ title, description, percent, value, icon: Icon }) {
+  const safePercent = Math.max(0, Math.min(100, Number(percent || 0)));
+
+  return (
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-soft">
+      <div className="flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-green-700">
+            <Icon size={15} />
+            Indicador visual
+          </div>
+
+          <h2 className="text-2xl font-black text-navy">{title}</h2>
+
+          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-500">
+            {description}
+          </p>
+
+          <p className="mt-5 text-4xl font-black text-navy">{value}</p>
+        </div>
+
+        <div className="relative grid h-40 w-40 shrink-0 place-items-center rounded-full bg-slate-100">
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: `conic-gradient(#16a34a ${safePercent}%, #e2e8f0 ${safePercent}% 100%)`
+            }}
+          />
+
+          <div className="relative grid h-28 w-28 place-items-center rounded-full bg-white shadow-sm">
+            <div className="text-center">
+              <p className="text-3xl font-black text-navy">{safePercent}%</p>
+              <p className="text-xs font-black uppercase text-slate-400">
+                taxa
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExecutiveSummary({
+  revenue,
+  trips,
+  bookings,
+  tickets,
+  usedTickets,
+  cancelledTickets,
+  boardingRate,
+  topCompany,
+  periodLabel
+}) {
+  return (
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-soft">
+      <div className="mb-6">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-yellowBrand/20 px-4 py-2 text-xs font-black uppercase tracking-wide text-amber-800">
+          <FileBarChart size={15} />
+          Resumo executivo
+        </div>
+
+        <h2 className="text-2xl font-black text-navy">
+          Leitura rápida da operação
+        </h2>
+
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+          Resumo automático baseado nos filtros aplicados.
+        </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Período analisado
+          </p>
+          <p className="mt-2 text-lg font-black text-navy">{periodLabel}</p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Receita estimada
+          </p>
+          <p className="mt-2 text-lg font-black text-navy">
+            {formatMoney(revenue)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Volume operacional
+          </p>
+          <p className="mt-2 text-lg font-black text-navy">
+            {trips} viagens · {bookings} reservas · {tickets} bilhetes
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Embarque
+          </p>
+          <p className="mt-2 text-lg font-black text-navy">
+            {usedTickets} embarques · {boardingRate}% de taxa
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Cancelamentos
+          </p>
+          <p className="mt-2 text-lg font-black text-navy">
+            {cancelledTickets} bilhetes cancelados/bloqueados
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Empresa em destaque
+          </p>
+          <p className="mt-2 text-lg font-black text-navy">
+            {topCompany || "Sem volume no filtro atual"}
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -698,6 +903,395 @@ export default function ReportsPanel() {
     downloadCsv(`vairapido-relatorios-${timestamp}.csv`, rows);
   }
 
+  function buildPrintableReportHtml() {
+    const generatedAt = formatDateTime(new Date().toISOString());
+    const periodLabel =
+      startDate || endDate
+        ? `${startDate || "início"} até ${endDate || "hoje"}`
+        : "Todos os períodos";
+
+    const topCompany = report.topCompanies[0]?.company || "Sem empresa";
+    const ticketStatusHtml = Object.entries(report.ticketStatusMap)
+      .map(
+        ([status, total]) => `
+          <tr>
+            <td>${escapeHtml(status)}</td>
+            <td>${escapeHtml(total)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const bookingStatusHtml = Object.entries(report.bookingStatusMap)
+      .map(
+        ([status, total]) => `
+          <tr>
+            <td>${escapeHtml(status)}</td>
+            <td>${escapeHtml(total)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const companyHtml = report.topCompanies
+      .map(
+        (company) => `
+          <tr>
+            <td>${escapeHtml(company.company)}</td>
+            <td>${escapeHtml(company.tickets)}</td>
+            <td>${escapeHtml(company.used)}</td>
+            <td>${escapeHtml(formatMoney(company.revenue))}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const boardingHtml = report.latestBoardings
+      .map(
+        (ticket) => `
+          <tr>
+            <td>${escapeHtml(ticket.ticketCode || ticket.code || "-")}</td>
+            <td>${escapeHtml(getPassengerName(ticket))}</td>
+            <td>${escapeHtml(getRouteLabel(ticket))}</td>
+            <td>${escapeHtml(getCompanyName(ticket))}</td>
+            <td>${escapeHtml(formatDateTime(ticket.usedAt || ticket.boardedAt || ticket.updatedAt))}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    return `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Relatório VaiRápido</title>
+          <style>
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              margin: 0;
+              padding: 32px;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #0A2540;
+              background: #ffffff;
+            }
+
+            .header {
+              background: #06213F;
+              color: #ffffff;
+              padding: 28px;
+              border-bottom: 8px solid #FFC400;
+              border-radius: 20px;
+              margin-bottom: 24px;
+            }
+
+            .brand {
+              font-size: 30px;
+              font-weight: 900;
+              margin: 0;
+            }
+
+            .subtitle {
+              margin: 8px 0 0;
+              color: #dbeafe;
+              font-size: 14px;
+              line-height: 1.6;
+            }
+
+            .meta {
+              margin-top: 16px;
+              font-size: 12px;
+              color: #fef3c7;
+              font-weight: 700;
+            }
+
+            .section {
+              border: 1px solid #dbe3ef;
+              border-radius: 18px;
+              margin-bottom: 20px;
+              overflow: hidden;
+            }
+
+            .section-title {
+              padding: 18px 20px;
+              border-bottom: 1px solid #dbe3ef;
+              background: #f8fafc;
+            }
+
+            .section-title h2 {
+              margin: 0;
+              font-size: 18px;
+              font-weight: 900;
+            }
+
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 14px;
+              margin-bottom: 20px;
+            }
+
+            .card {
+              border: 1px solid #dbe3ef;
+              border-radius: 18px;
+              padding: 18px;
+              background: #ffffff;
+            }
+
+            .card-label {
+              margin: 0;
+              font-size: 11px;
+              color: #64748b;
+              text-transform: uppercase;
+              font-weight: 900;
+              letter-spacing: .04em;
+            }
+
+            .card-value {
+              margin: 10px 0 0;
+              font-size: 24px;
+              font-weight: 900;
+              color: #0A2540;
+            }
+
+            .card-description {
+              margin: 8px 0 0;
+              font-size: 12px;
+              color: #475569;
+              line-height: 1.5;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+
+            th {
+              text-align: left;
+              background: #f8fafc;
+              color: #64748b;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: .04em;
+              padding: 12px 14px;
+              border-bottom: 1px solid #dbe3ef;
+            }
+
+            td {
+              padding: 12px 14px;
+              border-bottom: 1px solid #eef2f7;
+              font-size: 12px;
+              vertical-align: top;
+            }
+
+            .summary {
+              padding: 20px;
+              font-size: 14px;
+              line-height: 1.8;
+            }
+
+            .footer {
+              margin-top: 30px;
+              padding-top: 16px;
+              border-top: 1px solid #dbe3ef;
+              color: #64748b;
+              font-size: 11px;
+              text-align: center;
+            }
+
+            @media print {
+              body {
+                padding: 18px;
+              }
+
+              .header,
+              .section,
+              .card {
+                break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+
+        <body>
+          <div class="header">
+            <h1 class="brand">VaiRápido</h1>
+            <p class="subtitle">
+              Relatório executivo da operação — viagens, reservas, bilhetes, embarques e receita estimada.
+            </p>
+            <div class="meta">
+              Gerado em ${escapeHtml(generatedAt)} · Período: ${escapeHtml(periodLabel)}
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <p class="card-label">Receita estimada</p>
+              <p class="card-value">${escapeHtml(formatMoney(report.revenue))}</p>
+              <p class="card-description">Baseada nos bilhetes filtrados.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Viagens</p>
+              <p class="card-value">${escapeHtml(filteredTrips.length)}</p>
+              <p class="card-description">Total de viagens filtradas.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Reservas</p>
+              <p class="card-value">${escapeHtml(filteredBookings.length)}</p>
+              <p class="card-description">${escapeHtml(report.pendingBookings.length)} pendentes.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Bilhetes</p>
+              <p class="card-value">${escapeHtml(filteredTickets.length)}</p>
+              <p class="card-description">${escapeHtml(report.validTickets.length)} válidos para embarque.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Embarques</p>
+              <p class="card-value">${escapeHtml(report.usedTickets.length)}</p>
+              <p class="card-description">Bilhetes já utilizados.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Cancelados</p>
+              <p class="card-value">${escapeHtml(report.cancelledTickets.length)}</p>
+              <p class="card-description">Bilhetes bloqueados/cancelados.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Taxa de embarque</p>
+              <p class="card-value">${escapeHtml(boardingRate)}%</p>
+              <p class="card-description">Usados em relação ao total filtrado.</p>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Empresa destaque</p>
+              <p class="card-value" style="font-size: 16px;">${escapeHtml(topCompany)}</p>
+              <p class="card-description">Maior volume no filtro atual.</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <h2>Resumo executivo</h2>
+            </div>
+            <div class="summary">
+              No período analisado, a operação registrou <strong>${escapeHtml(filteredTrips.length)}</strong> viagens,
+              <strong>${escapeHtml(filteredBookings.length)}</strong> reservas e
+              <strong>${escapeHtml(filteredTickets.length)}</strong> bilhetes.
+              A receita estimada foi de <strong>${escapeHtml(formatMoney(report.revenue))}</strong>.
+              Foram identificados <strong>${escapeHtml(report.usedTickets.length)}</strong> embarques,
+              com taxa visual de <strong>${escapeHtml(boardingRate)}%</strong>.
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <h2>Bilhetes por status</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${ticketStatusHtml || "<tr><td colspan='2'>Nenhum bilhete encontrado.</td></tr>"}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <h2>Reservas por status</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${bookingStatusHtml || "<tr><td colspan='2'>Nenhuma reserva encontrada.</td></tr>"}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <h2>Empresas com maior volume</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Bilhetes</th>
+                  <th>Embarques</th>
+                  <th>Receita estimada</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${companyHtml || "<tr><td colspan='4'>Nenhuma empresa encontrada.</td></tr>"}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <h2>Últimos embarques</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Bilhete</th>
+                  <th>Passageiro</th>
+                  <th>Rota</th>
+                  <th>Empresa</th>
+                  <th>Data de uso</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${boardingHtml || "<tr><td colspan='5'>Nenhum embarque encontrado.</td></tr>"}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="footer">
+            VaiRápido · Relatório gerado automaticamente pelo Backoffice
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  function handlePrintReport() {
+    const html = buildPrintableReportHtml();
+    const printWindow = window.open("", "_blank", "width=1100,height=800");
+
+    if (!printWindow) {
+      alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.");
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    printWindow.focus();
+
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  }
+
   const ticketStatusRows = Object.entries(report.ticketStatusMap).map(
     ([status, total]) => [statusPill(status), total]
   );
@@ -705,6 +1299,39 @@ export default function ReportsPanel() {
   const bookingStatusRows = Object.entries(report.bookingStatusMap).map(
     ([status, total]) => [statusPill(status), total]
   );
+
+  const ticketChartRows = Object.entries(report.ticketStatusMap)
+    .map(([status, total]) => ({
+      label: status,
+      value: total,
+      description: "Bilhetes"
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const bookingChartRows = Object.entries(report.bookingStatusMap)
+    .map(([status, total]) => ({
+      label: status,
+      value: total,
+      description: "Reservas"
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const companyChartRows = report.topCompanies.map((item) => ({
+    label: item.company,
+    value: item.tickets,
+    displayValue: `${item.tickets} bilhetes`,
+    description: `${item.used} embarques · ${formatMoney(item.revenue)}`
+  }));
+
+  const boardingRate =
+    filteredTickets.length > 0
+      ? Math.round((report.usedTickets.length / filteredTickets.length) * 100)
+      : 0;
+
+  const periodLabel =
+    startDate || endDate
+      ? `${startDate || "início"} até ${endDate || "hoje"}`
+      : "Todos os períodos";
 
   const companyRows = report.topCompanies.map((item) => [
     <div>
@@ -743,12 +1370,12 @@ export default function ReportsPanel() {
               </div>
 
               <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight lg:text-5xl">
-                Relatórios reais da operação
+                Relatórios executivos da operação
               </h1>
 
               <p className="mt-4 max-w-2xl text-base leading-7 text-blue-100">
-                Consulte indicadores de viagens, reservas, bilhetes, embarques,
-                receita estimada e desempenho por empresa.
+                Consulte indicadores, gráficos, filtros, exportação CSV e
+                relatório executivo em PDF/impressão.
               </p>
             </div>
 
@@ -756,9 +1383,9 @@ export default function ReportsPanel() {
               <p className="text-xs font-black uppercase text-blue-100">
                 Módulo
               </p>
-              <p className="mt-1 text-3xl font-black text-yellowBrand">60</p>
+              <p className="mt-1 text-3xl font-black text-yellowBrand">62</p>
               <p className="text-sm font-bold text-white">
-                Período e CSV
+                Executivo e PDF
               </p>
             </div>
           </div>
@@ -810,6 +1437,15 @@ export default function ReportsPanel() {
                     className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-100 px-5 font-black text-navy"
                   >
                     Limpar filtros
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrintReport}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-yellowBrand px-5 font-black text-navy"
+                  >
+                    <Printer size={18} />
+                    Exportar PDF
                   </button>
 
                   <button
@@ -935,6 +1571,18 @@ export default function ReportsPanel() {
             </div>
           </section>
 
+          <ExecutiveSummary
+            revenue={report.revenue}
+            trips={filteredTrips.length}
+            bookings={filteredBookings.length}
+            tickets={filteredTickets.length}
+            usedTickets={report.usedTickets.length}
+            cancelledTickets={report.cancelledTickets.length}
+            boardingRate={boardingRate}
+            topCompany={report.topCompanies[0]?.company}
+            periodLabel={periodLabel}
+          />
+
           <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Receita estimada"
@@ -988,17 +1636,46 @@ export default function ReportsPanel() {
 
             <MetricCard
               title="Taxa de embarque"
-              value={
-                filteredTickets.length > 0
-                  ? `${Math.round(
-                      (report.usedTickets.length / filteredTickets.length) *
-                        100
-                    )}%`
-                  : "0%"
-              }
+              value={`${boardingRate}%`}
               description="Usados em relação ao total filtrado."
               icon={TrendingUp}
               tone="blue"
+            />
+          </section>
+
+          <section className="grid gap-7 xl:grid-cols-2">
+            <SummaryGauge
+              title="Taxa visual de embarque"
+              description="Mostra a proporção de bilhetes utilizados em relação ao total filtrado."
+              percent={boardingRate}
+              value={`${report.usedTickets.length} embarques`}
+              icon={TrendingUp}
+            />
+
+            <SimpleBarList
+              title="Empresas com maior volume"
+              description="Ranking visual por quantidade de bilhetes emitidos."
+              icon={Building2}
+              rows={companyChartRows}
+              emptyText="Nenhuma empresa encontrada nos filtros atuais."
+            />
+          </section>
+
+          <section className="grid gap-7 xl:grid-cols-2">
+            <SimpleBarList
+              title="Bilhetes por status"
+              description="Distribuição visual dos bilhetes filtrados."
+              icon={TicketCheck}
+              rows={ticketChartRows}
+              emptyText="Nenhum bilhete encontrado."
+            />
+
+            <SimpleBarList
+              title="Reservas por status"
+              description="Distribuição visual das reservas filtradas."
+              icon={BarChart3}
+              rows={bookingChartRows}
+              emptyText="Nenhuma reserva encontrada."
             />
           </section>
 
@@ -1069,8 +1746,8 @@ export default function ReportsPanel() {
                 </h3>
 
                 <p className="mt-1 text-sm font-semibold leading-6 text-blue-800">
-                  Podemos adicionar exportação PDF, gráficos visuais e resumo
-                  executivo para administração.
+                  Podemos adicionar gráficos por período e resumo financeiro por
+                  rota.
                 </p>
               </div>
             </div>
