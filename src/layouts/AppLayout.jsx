@@ -1,6 +1,7 @@
 import {
   Bus,
   ClipboardCheck,
+  ClipboardList,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -66,6 +67,12 @@ const links = [
     label: "Viagens",
     path: "/viagens",
     icon: CalendarClock,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Reservas",
+    path: "/reservas",
+    icon: ClipboardList,
     allowedRoles: managementRoles
   },
   {
