@@ -17,6 +17,10 @@ function normalizeList(data) {
     return data.data;
   }
 
+  if (Array.isArray(data?.messages)) {
+    return data.messages;
+  }
+
   return [];
 }
 
@@ -29,6 +33,11 @@ export async function sendPaymentInstructions(bookingId) {
 
 export async function sendTicketMessage(ticketId) {
   const response = await api.post(`/api/v1/whatsapp/send-ticket/${ticketId}`);
+  return response.data;
+}
+
+export async function backfillMissingWhatsAppMessages() {
+  const response = await api.post("/api/v1/whatsapp/messages/backfill-missing");
   return response.data;
 }
 
