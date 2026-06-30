@@ -13,7 +13,8 @@ import {
   WalletCards,
   TicketCheck,
   UserRound,
-  MessageCircle
+  MessageCircle,
+  Globe2
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -37,84 +38,20 @@ const managementRoles = [
 const adminOnlyRoles = ["ADMIN", "ROLE_ADMIN"];
 
 const links = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: LayoutDashboard,
-    allowedRoles: allBackofficeRoles
-  },
-  {
-    label: "Fiscal",
-    path: "/fiscal",
-    icon: ShieldCheck,
-    allowedRoles: allBackofficeRoles
-  },
-  {
-    label: "Operador",
-    path: "/operador",
-    icon: ClipboardCheck,
-    allowedRoles: allBackofficeRoles
-  },
-  {
-    label: "Empresas",
-    path: "/empresas",
-    icon: Building2,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Rotas",
-    path: "/rotas",
-    icon: RouteIcon,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Viagens",
-    path: "/viagens",
-    icon: CalendarClock,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Reservas",
-    path: "/reservas",
-    icon: ClipboardList,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Pagamentos",
-    path: "/pagamentos",
-    icon: WalletCards,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Bilhetes",
-    path: "/bilhetes",
-    icon: TicketCheck,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Passageiros",
-    path: "/passageiros",
-    icon: UserRound,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "WhatsApp",
-    path: "/whatsapp",
-    icon: MessageCircle,
-    allowedRoles: managementRoles
-  },
-  {
-    label: "Usuários",
-    path: "/usuarios",
-    icon: Users,
-    allowedRoles: adminOnlyRoles
-  },
-  {
-    label: "Relatórios",
-    path: "/relatorios",
-    icon: FileBarChart,
-    allowedRoles: managementRoles
-  }
+  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, allowedRoles: allBackofficeRoles },
+  { label: "Fiscal", path: "/fiscal", icon: ShieldCheck, allowedRoles: allBackofficeRoles },
+  { label: "Operador", path: "/operador", icon: ClipboardCheck, allowedRoles: allBackofficeRoles },
+  { label: "Empresas", path: "/empresas", icon: Building2, allowedRoles: managementRoles },
+  { label: "Rotas", path: "/rotas", icon: RouteIcon, allowedRoles: managementRoles },
+  { label: "Viagens", path: "/viagens", icon: CalendarClock, allowedRoles: managementRoles },
+  { label: "Reservas", path: "/reservas", icon: ClipboardList, allowedRoles: managementRoles },
+  { label: "Pagamentos", path: "/pagamentos", icon: WalletCards, allowedRoles: managementRoles },
+  { label: "Bilhetes", path: "/bilhetes", icon: TicketCheck, allowedRoles: managementRoles },
+  { label: "Passageiros", path: "/passageiros", icon: UserRound, allowedRoles: managementRoles },
+  { label: "WhatsApp", path: "/whatsapp", icon: MessageCircle, allowedRoles: managementRoles },
+  { label: "Multi-país", path: "/configuracoes-pais", icon: Globe2, allowedRoles: managementRoles },
+  { label: "Usuários", path: "/usuarios", icon: Users, allowedRoles: adminOnlyRoles },
+  { label: "Relatórios", path: "/relatorios", icon: FileBarChart, allowedRoles: managementRoles }
 ];
 
 function canAccess(userRole, allowedRoles = []) {

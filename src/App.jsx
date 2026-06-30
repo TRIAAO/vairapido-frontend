@@ -12,6 +12,7 @@ import PaymentsPanel from "./pages/PaymentsPanel";
 import TicketsPanel from "./pages/TicketsPanel";
 import PassengersPanel from "./pages/PassengersPanel";
 import WhatsAppPanel from "./pages/WhatsAppPanel";
+import CountrySettingsPanel from "./pages/CountrySettingsPanel";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
 import UsersPanel from "./pages/UsersPanel";
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/bilhetes" element={<TicketsPanel />} />
           <Route path="/passageiros" element={<PassengersPanel />} />
           <Route path="/whatsapp" element={<WhatsAppPanel />} />
+          <Route path="/configuracoes-pais" element={<CountrySettingsPanel />} />
           <Route path="/relatorios" element={<ReportsPanel />} />
         </Route>
       </Route>
