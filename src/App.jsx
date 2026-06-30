@@ -8,6 +8,7 @@ import CompaniesPanel from "./pages/CompaniesPanel";
 import RoutesPanel from "./pages/RoutesPanel";
 import TripsPanel from "./pages/TripsPanel";
 import BookingsPanel from "./pages/BookingsPanel";
+import PaymentsPanel from "./pages/PaymentsPanel";
 import FiscalPanel from "./pages/FiscalPanel";
 import Login from "./pages/Login";
 import UsersPanel from "./pages/UsersPanel";
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/rotas" element={<RoutesPanel />} />
           <Route path="/viagens" element={<TripsPanel />} />
           <Route path="/reservas" element={<BookingsPanel />} />
+          <Route path="/pagamentos" element={<PaymentsPanel />} />
           <Route path="/relatorios" element={<ReportsPanel />} />
         </Route>
       </Route>

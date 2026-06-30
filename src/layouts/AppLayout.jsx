@@ -9,7 +9,8 @@ import {
   FileBarChart,
   Building2,
   Route as RouteIcon,
-  CalendarClock
+  CalendarClock,
+  WalletCards
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -73,6 +74,12 @@ const links = [
     label: "Reservas",
     path: "/reservas",
     icon: ClipboardList,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Pagamentos",
+    path: "/pagamentos",
+    icon: WalletCards,
     allowedRoles: managementRoles
   },
   {
