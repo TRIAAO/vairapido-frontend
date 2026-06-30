@@ -20,12 +20,28 @@ import {
 import { extractApiError } from "../api/client";
 import { getOperatorOverview } from "../api/operation";
 
+const currencyCountryMap = {
+  AOA: "Angola",
+  BRL: "Brasil",
+  USD: "Dólar",
+  EUR: "Euro"
+};
+
 function normalizeStatus(value) {
   return String(value || "").trim().toUpperCase();
 }
 
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeCurrency(value) {
+  return String(value || "BRL").trim().toUpperCase();
+}
+
+function getCurrencyCountry(currency) {
+  const normalized = normalizeCurrency(currency);
+  return currencyCountryMap[normalized] || normalized;
 }
 
 function isCancelledStatus(status) {
@@ -69,7 +85,7 @@ function formatDateLabel(value) {
 function formatMoney(value, currency = "BRL") {
   const number = Number(value || 0);
   const safeValue = Number.isNaN(number) ? 0 : number;
-  const safeCurrency = String(currency || "BRL").trim().toUpperCase();
+  const safeCurrency = normalizeCurrency(currency);
 
   try {
     return new Intl.NumberFormat("pt-BR", {
@@ -86,7 +102,6 @@ function formatMoney(value, currency = "BRL") {
 
 function formatNumber(value) {
   const number = Number(value || 0);
-
   return new Intl.NumberFormat("pt-BR").format(Number.isNaN(number) ? 0 : number);
 }
 
@@ -122,12 +137,13 @@ function getCompanyName(item) {
 }
 
 function getItemCurrency(item) {
-  return (
+  return normalizeCurrency(
     item.currency ||
-    item.booking?.currency ||
-    item.trip?.currency ||
-    item.route?.currency ||
-    "BRL"
+      item.booking?.currency ||
+      item.trip?.currency ||
+      item.route?.currency ||
+      item.payment?.currency ||
+      "BRL"
   );
 }
 
@@ -318,6 +334,19 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function groupRowsByCurrency(rows) {
+  return rows.reduce((acc, row) => {
+    const currency = normalizeCurrency(row.currency);
+
+    if (!acc[currency]) {
+      acc[currency] = [];
+    }
+
+    acc[currency].push(row);
+    return acc;
+  }, {});
+}
+
 function SectionHeading({ number, title, description, icon: Icon }) {
   return (
     <div className="mb-6 flex min-w-0 items-start gap-4">
@@ -366,6 +395,50 @@ function MetricCard({ title, value, description, icon: Icon, tone = "navy" }) {
           className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${tones[tone]}`}
         >
           <Icon size={23} strokeWidth={2.8} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CurrencySummaryCard({ rows }) {
+  return (
+    <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex min-w-0 items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Receita por moeda
+          </p>
+
+          <div className="mt-3 grid gap-2">
+            {rows.length === 0 ? (
+              <p className="text-2xl font-black tracking-tight text-navy">
+                Sem receita
+              </p>
+            ) : (
+              rows.slice(0, 3).map((row) => (
+                <div
+                  key={row.currency}
+                  className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2"
+                >
+                  <span className="shrink-0 text-xs font-black text-slate-500">
+                    {row.currency}
+                  </span>
+                  <strong className="truncate text-lg font-black text-navy">
+                    {formatMoney(row.revenue, row.currency)}
+                  </strong>
+                </div>
+              ))
+            )}
+          </div>
+
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+            Valores separados por país/moeda.
+          </p>
+        </div>
+
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-green-100 text-green-700">
+          <WalletCards size={23} strokeWidth={2.8} />
         </div>
       </div>
     </article>
@@ -534,6 +607,7 @@ export default function ReportsPanel() {
   const [query, setQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [currencyFilter, setCurrencyFilter] = useState("ALL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -544,11 +618,6 @@ export default function ReportsPanel() {
     () => [...tickets, ...bookings, ...trips],
     [bookings, tickets, trips]
   );
-
-  const displayCurrency = useMemo(() => {
-    const itemWithCurrency = allItems.find((item) => getItemCurrency(item));
-    return getItemCurrency(itemWithCurrency || {});
-  }, [allItems]);
 
   const companyOptions = useMemo(() => {
     const names = allItems
@@ -562,6 +631,12 @@ export default function ReportsPanel() {
     const statuses = allItems.map((item) => getItemStatus(item)).filter(Boolean);
 
     return Array.from(new Set(statuses)).sort((a, b) => a.localeCompare(b));
+  }, [allItems]);
+
+  const currencyOptions = useMemo(() => {
+    const currencies = allItems.map((item) => getItemCurrency(item)).filter(Boolean);
+
+    return Array.from(new Set(currencies)).sort((a, b) => a.localeCompare(b));
   }, [allItems]);
 
   function matchesPeriodFilter(item, customDate) {
@@ -585,9 +660,11 @@ export default function ReportsPanel() {
     const term = normalizeText(query);
     const company = getCompanyName(item);
     const status = getItemStatus(item);
+    const currency = getItemCurrency(item);
 
     const matchesCompany = companyFilter === "ALL" || company === companyFilter;
     const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+    const matchesCurrency = currencyFilter === "ALL" || currency === currencyFilter;
     const matchesQuery =
       !term ||
       [
@@ -598,29 +675,35 @@ export default function ReportsPanel() {
         getPassengerName(item),
         getCompanyName(item),
         getRouteLabel(item),
-        status
+        status,
+        currency,
+        getCurrencyCountry(currency)
       ]
         .filter(Boolean)
         .some((value) => normalizeText(value).includes(term));
 
     return (
-      matchesCompany && matchesStatus && matchesQuery && matchesPeriodFilter(item, customDate)
+      matchesCompany &&
+      matchesStatus &&
+      matchesCurrency &&
+      matchesQuery &&
+      matchesPeriodFilter(item, customDate)
     );
   }
 
   const filteredTrips = useMemo(
     () => trips.filter((trip) => matchesCommonFilters(trip, trip.departureAt)),
-    [trips, query, companyFilter, statusFilter, startDate, endDate]
+    [trips, query, companyFilter, statusFilter, currencyFilter, startDate, endDate]
   );
 
   const filteredBookings = useMemo(
     () => bookings.filter((booking) => matchesCommonFilters(booking)),
-    [bookings, query, companyFilter, statusFilter, startDate, endDate]
+    [bookings, query, companyFilter, statusFilter, currencyFilter, startDate, endDate]
   );
 
   const filteredTickets = useMemo(
     () => tickets.filter((ticket) => matchesCommonFilters(ticket)),
-    [tickets, query, companyFilter, statusFilter, startDate, endDate]
+    [tickets, query, companyFilter, statusFilter, currencyFilter, startDate, endDate]
   );
 
   const report = useMemo(() => {
@@ -640,32 +723,55 @@ export default function ReportsPanel() {
       (booking) => getItemStatus(booking) === "PENDING_PAYMENT"
     );
 
-    const revenue = revenueTickets.reduce((total, ticket) => {
-      const value = Number(getTicketAmount(ticket));
-      return total + (Number.isNaN(value) ? 0 : value);
-    }, 0);
-
-    const routeMap = revenueTickets.reduce((acc, ticket) => {
-      const route = getRouteLabel(ticket) || "Rota não informada";
+    const revenueByCurrencyMap = revenueTickets.reduce((acc, ticket) => {
+      const currency = getItemCurrency(ticket);
       const amount = Number(getTicketAmount(ticket));
       const status = getItemStatus(ticket);
 
-      if (!acc[route]) {
-        acc[route] = {
+      if (!acc[currency]) {
+        acc[currency] = {
+          currency,
+          country: getCurrencyCountry(currency),
+          revenue: 0,
+          tickets: 0,
+          boardings: 0
+        };
+      }
+
+      acc[currency].tickets += 1;
+      acc[currency].revenue += Number.isNaN(amount) ? 0 : amount;
+
+      if (status === "USED") {
+        acc[currency].boardings += 1;
+      }
+
+      return acc;
+    }, {});
+
+    const routeMap = revenueTickets.reduce((acc, ticket) => {
+      const route = getRouteLabel(ticket) || "Rota não informada";
+      const currency = getItemCurrency(ticket);
+      const key = `${currency}__${route}`;
+      const amount = Number(getTicketAmount(ticket));
+      const status = getItemStatus(ticket);
+
+      if (!acc[key]) {
+        acc[key] = {
           label: route,
           route,
           revenue: 0,
           tickets: 0,
           boardings: 0,
-          currency: getItemCurrency(ticket)
+          currency,
+          country: getCurrencyCountry(currency)
         };
       }
 
-      acc[route].tickets += 1;
-      acc[route].revenue += Number.isNaN(amount) ? 0 : amount;
+      acc[key].tickets += 1;
+      acc[key].revenue += Number.isNaN(amount) ? 0 : amount;
 
       if (status === "USED") {
-        acc[route].boardings += 1;
+        acc[key].boardings += 1;
       }
 
       return acc;
@@ -673,25 +779,28 @@ export default function ReportsPanel() {
 
     const companyMap = revenueTickets.reduce((acc, ticket) => {
       const company = getCompanyName(ticket) || "Sem empresa";
+      const currency = getItemCurrency(ticket);
+      const key = `${currency}__${company}`;
       const amount = Number(getTicketAmount(ticket));
       const status = getItemStatus(ticket);
 
-      if (!acc[company]) {
-        acc[company] = {
+      if (!acc[key]) {
+        acc[key] = {
           label: company,
           company,
           revenue: 0,
           tickets: 0,
           boardings: 0,
-          currency: getItemCurrency(ticket)
+          currency,
+          country: getCurrencyCountry(currency)
         };
       }
 
-      acc[company].tickets += 1;
-      acc[company].revenue += Number.isNaN(amount) ? 0 : amount;
+      acc[key].tickets += 1;
+      acc[key].revenue += Number.isNaN(amount) ? 0 : amount;
 
       if (status === "USED") {
-        acc[company].boardings += 1;
+        acc[key].boardings += 1;
       }
 
       return acc;
@@ -699,23 +808,27 @@ export default function ReportsPanel() {
 
     const revenueByDateMap = revenueTickets.reduce((acc, ticket) => {
       const date = getDateOnly(getItemDate(ticket));
+      const currency = getItemCurrency(ticket);
+      const key = `${currency}__${date}`;
       const amount = Number(getTicketAmount(ticket));
 
       if (!date) {
         return acc;
       }
 
-      if (!acc[date]) {
-        acc[date] = {
+      if (!acc[key]) {
+        acc[key] = {
           label: date,
           shortLabel: formatDateLabel(date),
           value: 0,
-          tickets: 0
+          tickets: 0,
+          currency,
+          country: getCurrencyCountry(currency)
         };
       }
 
-      acc[date].value += Number.isNaN(amount) ? 0 : amount;
-      acc[date].tickets += 1;
+      acc[key].value += Number.isNaN(amount) ? 0 : amount;
+      acc[key].tickets += 1;
 
       return acc;
     }, {});
@@ -742,15 +855,30 @@ export default function ReportsPanel() {
       return acc;
     }, {});
 
-    const routeFinancial = Object.values(routeMap).sort(
-      (a, b) => b.revenue - a.revenue
+    const revenueByCurrency = Object.values(revenueByCurrencyMap).sort((a, b) =>
+      a.currency.localeCompare(b.currency)
     );
-    const companyRevenue = Object.values(companyMap).sort(
-      (a, b) => b.revenue - a.revenue
-    );
-    const revenueByDate = Object.values(revenueByDateMap).sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
+    const routeFinancial = Object.values(routeMap).sort((a, b) => {
+      if (a.currency !== b.currency) {
+        return a.currency.localeCompare(b.currency);
+      }
+
+      return b.revenue - a.revenue;
+    });
+    const companyRevenue = Object.values(companyMap).sort((a, b) => {
+      if (a.currency !== b.currency) {
+        return a.currency.localeCompare(b.currency);
+      }
+
+      return b.revenue - a.revenue;
+    });
+    const revenueByDate = Object.values(revenueByDateMap).sort((a, b) => {
+      if (a.currency !== b.currency) {
+        return a.currency.localeCompare(b.currency);
+      }
+
+      return a.label.localeCompare(b.label);
+    });
     const boardingsByDate = Object.values(boardingsByDateMap).sort((a, b) =>
       a.label.localeCompare(b.label)
     );
@@ -760,7 +888,7 @@ export default function ReportsPanel() {
       usedTickets,
       cancelledTickets,
       pendingBookings,
-      revenue,
+      revenueByCurrency,
       routeFinancial,
       companyRevenue,
       revenueByDate,
@@ -768,53 +896,39 @@ export default function ReportsPanel() {
     };
   }, [filteredBookings, filteredTickets]);
 
-  const routeFinancialRows = report.routeFinancial.slice(0, 8).map((item) => ({
-    label: item.route,
-    value: item.revenue,
-    displayValue: formatMoney(item.revenue, item.currency || displayCurrency),
-    description: `${formatNumber(item.tickets)} bilhetes · ${formatNumber(
-      item.boardings
-    )} embarques`
-  }));
+  const routeGroups = groupRowsByCurrency(report.routeFinancial);
+  const companyGroups = groupRowsByCurrency(report.companyRevenue);
+  const periodGroups = groupRowsByCurrency(report.revenueByDate);
 
-  const companyRevenueRows = report.companyRevenue.slice(0, 8).map((item) => ({
-    label: item.company,
-    value: item.revenue,
-    displayValue: formatMoney(item.revenue, item.currency || displayCurrency),
-    description: `${formatNumber(item.tickets)} bilhetes · ${formatNumber(
-      item.boardings
-    )} embarques`
-  }));
+  const visibleRouteCurrencies = Object.keys(routeGroups).sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const visibleCompanyCurrencies = Object.keys(companyGroups).sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const visiblePeriodCurrencies = Object.keys(periodGroups).sort((a, b) =>
+    a.localeCompare(b)
+  );
 
-  const revenuePeriodRows = report.revenueByDate.slice(-12).map((item) => ({
-    ...item,
-    displayValue: formatMoney(item.value, displayCurrency)
-  }));
-
-  const boardingDayRows = report.boardingsByDate.slice(-12).map((item) => ({
-    ...item,
-    displayValue: `${formatNumber(item.value)} embarques`
-  }));
-
-  const routeTableRows = report.routeFinancial.slice(0, 6).map((item) => [
+  const routeTableRows = report.routeFinancial.slice(0, 8).map((item) => [
     <div className="min-w-0">
       <p className="max-w-[320px] truncate font-black text-navy">{item.route}</p>
       <p className="mt-1 text-xs font-bold text-slate-500">
-        {formatNumber(item.tickets)} bilhetes emitidos
+        {item.country} · {item.currency} · {formatNumber(item.tickets)} bilhetes
       </p>
     </div>,
-    formatMoney(item.revenue, item.currency || displayCurrency),
+    formatMoney(item.revenue, item.currency),
     formatNumber(item.boardings)
   ]);
 
-  const companyTableRows = report.companyRevenue.slice(0, 6).map((item) => [
+  const companyTableRows = report.companyRevenue.slice(0, 8).map((item) => [
     <div className="min-w-0">
       <p className="max-w-[280px] truncate font-black text-navy">{item.company}</p>
       <p className="mt-1 text-xs font-bold text-slate-500">
-        {formatNumber(item.tickets)} bilhetes
+        {item.country} · {item.currency} · {formatNumber(item.tickets)} bilhetes
       </p>
     </div>,
-    formatMoney(item.revenue, item.currency || displayCurrency),
+    formatMoney(item.revenue, item.currency),
     formatNumber(item.boardings)
   ]);
 
@@ -837,8 +951,12 @@ export default function ReportsPanel() {
       ? `${startDate || "início"} até ${endDate || "hoje"}`
       : "Todos os períodos";
 
-  const topRoute = report.routeFinancial[0]?.route || "Sem rota com receita";
-  const topCompany = report.companyRevenue[0]?.company || "Sem empresa com receita";
+  const topRoute = report.routeFinancial[0]
+    ? `${report.routeFinancial[0].route} · ${report.routeFinancial[0].currency}`
+    : "Sem rota com receita";
+  const topCompany = report.companyRevenue[0]
+    ? `${report.companyRevenue[0].company} · ${report.companyRevenue[0].currency}`
+    : "Sem empresa com receita";
 
   async function loadReports() {
     setLoading(true);
@@ -879,18 +997,34 @@ export default function ReportsPanel() {
     setQuery("");
     setCompanyFilter("ALL");
     setStatusFilter("ALL");
+    setCurrencyFilter("ALL");
     setStartDate("");
     setEndDate("");
   }
 
   function handleExportCsv() {
     const rows = [
-      ["Seção", "Categoria", "Receita", "Bilhetes", "Embarques", "Data"]
+      ["Seção", "País", "Moeda", "Categoria", "Receita", "Bilhetes", "Embarques", "Data"]
     ];
+
+    report.revenueByCurrency.forEach((item) => {
+      rows.push([
+        "Receita por moeda",
+        item.country,
+        item.currency,
+        item.currency,
+        item.revenue,
+        item.tickets,
+        item.boardings,
+        ""
+      ]);
+    });
 
     report.routeFinancial.forEach((item) => {
       rows.push([
         "Financeiro por rota",
+        item.country,
+        item.currency,
         item.route,
         item.revenue,
         item.tickets,
@@ -902,6 +1036,8 @@ export default function ReportsPanel() {
     report.revenueByDate.forEach((item) => {
       rows.push([
         "Gráfico por período",
+        item.country,
+        item.currency,
         "Receita por data",
         item.value,
         item.tickets,
@@ -913,6 +1049,8 @@ export default function ReportsPanel() {
     report.companyRevenue.forEach((item) => {
       rows.push([
         "Receita por empresa",
+        item.country,
+        item.currency,
         item.company,
         item.revenue,
         item.tickets,
@@ -924,6 +1062,8 @@ export default function ReportsPanel() {
     report.boardingsByDate.forEach((item) => {
       rows.push([
         "Embarques por dia",
+        "",
+        "",
         "Embarques",
         "",
         "",
@@ -933,19 +1073,35 @@ export default function ReportsPanel() {
     });
 
     const timestamp = new Date().toISOString().slice(0, 19).replaceAll(":", "-");
-    downloadCsv(`vairapido-modulo-67-relatorios-${timestamp}.csv`, rows);
+    downloadCsv(`vairapido-modulo-67-relatorios-multimoeda-${timestamp}.csv`, rows);
   }
 
   function buildPrintableReportHtml() {
     const generatedAt = formatDateTime(new Date().toISOString());
 
+    const currencyRows = report.revenueByCurrency
+      .map(
+        (item) => `
+          <tr>
+            <td>${escapeHtml(item.country)}</td>
+            <td>${escapeHtml(item.currency)}</td>
+            <td>${escapeHtml(formatMoney(item.revenue, item.currency))}</td>
+            <td>${escapeHtml(item.tickets)}</td>
+            <td>${escapeHtml(item.boardings)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
     const routeRows = report.routeFinancial
-      .slice(0, 10)
+      .slice(0, 12)
       .map(
         (item) => `
           <tr>
             <td>${escapeHtml(item.route)}</td>
-            <td>${escapeHtml(formatMoney(item.revenue, item.currency || displayCurrency))}</td>
+            <td>${escapeHtml(item.country)}</td>
+            <td>${escapeHtml(item.currency)}</td>
+            <td>${escapeHtml(formatMoney(item.revenue, item.currency))}</td>
             <td>${escapeHtml(item.tickets)}</td>
             <td>${escapeHtml(item.boardings)}</td>
           </tr>
@@ -954,12 +1110,14 @@ export default function ReportsPanel() {
       .join("");
 
     const periodRows = report.revenueByDate
-      .slice(-12)
+      .slice(-18)
       .map(
         (item) => `
           <tr>
             <td>${escapeHtml(formatDateLabel(item.label))}</td>
-            <td>${escapeHtml(formatMoney(item.value, displayCurrency))}</td>
+            <td>${escapeHtml(item.country)}</td>
+            <td>${escapeHtml(item.currency)}</td>
+            <td>${escapeHtml(formatMoney(item.value, item.currency))}</td>
             <td>${escapeHtml(item.tickets)}</td>
           </tr>
         `
@@ -967,12 +1125,14 @@ export default function ReportsPanel() {
       .join("");
 
     const companyRows = report.companyRevenue
-      .slice(0, 10)
+      .slice(0, 12)
       .map(
         (item) => `
           <tr>
             <td>${escapeHtml(item.company)}</td>
-            <td>${escapeHtml(formatMoney(item.revenue, item.currency || displayCurrency))}</td>
+            <td>${escapeHtml(item.country)}</td>
+            <td>${escapeHtml(item.currency)}</td>
+            <td>${escapeHtml(formatMoney(item.revenue, item.currency))}</td>
             <td>${escapeHtml(item.tickets)}</td>
             <td>${escapeHtml(item.boardings)}</td>
           </tr>
@@ -1021,13 +1181,13 @@ export default function ReportsPanel() {
             .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
             .card { border: 1px solid #dbe3ef; border-radius: 18px; padding: 16px; }
             .label { margin: 0; font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 900; letter-spacing: .04em; }
-            .value { margin: 8px 0 0; font-size: 20px; font-weight: 900; color: #0A2540; }
+            .value { margin: 8px 0 0; font-size: 18px; font-weight: 900; color: #0A2540; }
             .section { border: 1px solid #dbe3ef; border-radius: 18px; margin-bottom: 18px; overflow: hidden; }
             .section-title { padding: 16px 18px; border-bottom: 1px solid #dbe3ef; background: #f8fafc; }
             .section-title h2 { margin: 0; font-size: 17px; font-weight: 900; }
             table { width: 100%; border-collapse: collapse; }
-            th { text-align: left; background: #f8fafc; color: #64748b; font-size: 11px; padding: 12px; text-transform: uppercase; }
-            td { padding: 12px; border-top: 1px solid #eef2f7; font-size: 12px; vertical-align: top; }
+            th { text-align: left; background: #f8fafc; color: #64748b; font-size: 10px; padding: 10px; text-transform: uppercase; }
+            td { padding: 10px; border-top: 1px solid #eef2f7; font-size: 11px; vertical-align: top; }
             .footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid #dbe3ef; color: #64748b; font-size: 11px; text-align: center; }
             @media print {
               body { padding: 18px; }
@@ -1039,29 +1199,36 @@ export default function ReportsPanel() {
           <div class="header">
             <h1 class="brand">VaiRápido</h1>
             <p class="subtitle">Módulo 67 — financeiro por rota, gráfico por período, receita por empresa e embarques por dia.</p>
-            <div class="meta">Gerado em ${escapeHtml(generatedAt)} · Período: ${escapeHtml(periodLabel)}</div>
+            <div class="meta">Gerado em ${escapeHtml(generatedAt)} · Período: ${escapeHtml(periodLabel)} · Moeda: ${escapeHtml(currencyFilter === "ALL" ? "Todas separadas" : currencyFilter)}</div>
           </div>
 
           <div class="grid">
-            <div class="card"><p class="label">Receita estimada</p><p class="value">${escapeHtml(formatMoney(report.revenue, displayCurrency))}</p></div>
-            <div class="card"><p class="label">Rotas com receita</p><p class="value">${escapeHtml(report.routeFinancial.length)}</p></div>
-            <div class="card"><p class="label">Empresas com receita</p><p class="value">${escapeHtml(report.companyRevenue.length)}</p></div>
-            <div class="card"><p class="label">Embarques</p><p class="value">${escapeHtml(report.usedTickets.length)}</p></div>
+            ${report.revenueByCurrency
+              .slice(0, 4)
+              .map(
+                (item) => `<div class="card"><p class="label">${escapeHtml(item.country)} · ${escapeHtml(item.currency)}</p><p class="value">${escapeHtml(formatMoney(item.revenue, item.currency))}</p></div>`
+              )
+              .join("") || "<div class='card'><p class='label'>Receita</p><p class='value'>Sem receita</p></div>"}
+          </div>
+
+          <div class="section">
+            <div class="section-title"><h2>Resumo por país/moeda</h2></div>
+            <table><thead><tr><th>País</th><th>Moeda</th><th>Receita</th><th>Bilhetes</th><th>Embarques</th></tr></thead><tbody>${currencyRows || "<tr><td colspan='5'>Nenhuma moeda encontrada.</td></tr>"}</tbody></table>
           </div>
 
           <div class="section">
             <div class="section-title"><h2>1. Financeiro por rota</h2></div>
-            <table><thead><tr><th>Rota</th><th>Receita</th><th>Bilhetes</th><th>Embarques</th></tr></thead><tbody>${routeRows || "<tr><td colspan='4'>Nenhuma rota encontrada.</td></tr>"}</tbody></table>
+            <table><thead><tr><th>Rota</th><th>País</th><th>Moeda</th><th>Receita</th><th>Bilhetes</th><th>Embarques</th></tr></thead><tbody>${routeRows || "<tr><td colspan='6'>Nenhuma rota encontrada.</td></tr>"}</tbody></table>
           </div>
 
           <div class="section">
             <div class="section-title"><h2>2. Gráficos por período</h2></div>
-            <table><thead><tr><th>Data</th><th>Receita</th><th>Bilhetes</th></tr></thead><tbody>${periodRows || "<tr><td colspan='3'>Nenhum período encontrado.</td></tr>"}</tbody></table>
+            <table><thead><tr><th>Data</th><th>País</th><th>Moeda</th><th>Receita</th><th>Bilhetes</th></tr></thead><tbody>${periodRows || "<tr><td colspan='5'>Nenhum período encontrado.</td></tr>"}</tbody></table>
           </div>
 
           <div class="section">
             <div class="section-title"><h2>3. Receita por empresa</h2></div>
-            <table><thead><tr><th>Empresa</th><th>Receita</th><th>Bilhetes</th><th>Embarques</th></tr></thead><tbody>${companyRows || "<tr><td colspan='4'>Nenhuma empresa encontrada.</td></tr>"}</tbody></table>
+            <table><thead><tr><th>Empresa</th><th>País</th><th>Moeda</th><th>Receita</th><th>Bilhetes</th><th>Embarques</th></tr></thead><tbody>${companyRows || "<tr><td colspan='6'>Nenhuma empresa encontrada.</td></tr>"}</tbody></table>
           </div>
 
           <div class="section">
@@ -1069,7 +1236,7 @@ export default function ReportsPanel() {
             <table><thead><tr><th>Data</th><th>Embarques</th></tr></thead><tbody>${boardingRows || "<tr><td colspan='2'>Nenhum embarque encontrado.</td></tr>"}</tbody></table>
           </div>
 
-          <div class="footer">VaiRápido · Relatório gerado automaticamente pelo Backoffice</div>
+          <div class="footer">VaiRápido · Relatório multi-país gerado automaticamente pelo Backoffice</div>
         </body>
       </html>
     `;
@@ -1102,7 +1269,7 @@ export default function ReportsPanel() {
             <div className="min-w-0">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-yellowBrand">
                 <FileBarChart size={16} />
-                Módulo 67
+                Módulo 67 · Multi-país
               </div>
 
               <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight lg:text-4xl">
@@ -1110,13 +1277,16 @@ export default function ReportsPanel() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-blue-100 lg:text-base">
-                Visão limpa para receita por rota, evolução por período, receita por empresa e embarques por dia.
+                Receita separada por moeda para Brasil e Angola, sem misturar BRL com AOA.
               </p>
             </div>
 
             <div className="grid shrink-0 gap-2 rounded-3xl bg-white/10 p-4 text-sm font-bold text-blue-100">
               <span>Período</span>
               <strong className="text-lg text-yellowBrand">{periodLabel}</strong>
+              <span>
+                Moeda: {currencyFilter === "ALL" ? "Todas separadas" : currencyFilter}
+              </span>
             </div>
           </div>
         </div>
@@ -1150,7 +1320,7 @@ export default function ReportsPanel() {
                 </div>
                 <h2 className="text-2xl font-black text-navy">Controle do relatório</h2>
                 <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                  Use poucos filtros para manter a leitura objetiva e segura em 100% de zoom.
+                  Para comparar valores financeiros, filtre uma moeda. Em “Todas”, os valores ficam separados.
                 </p>
               </div>
 
@@ -1183,7 +1353,7 @@ export default function ReportsPanel() {
               </div>
             </div>
 
-            <div className="grid min-w-0 gap-4 lg:grid-cols-4">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-5">
               <label className="grid min-w-0 gap-2 lg:col-span-2">
                 <span className="text-sm font-black text-navy">Buscar</span>
                 <div className="relative min-w-0">
@@ -1195,7 +1365,7 @@ export default function ReportsPanel() {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     className="min-h-12 w-full rounded-2xl border border-slate-200 pl-11 pr-4 text-sm font-bold outline-none focus:border-navy focus:ring-4 focus:ring-navy/10"
-                    placeholder="Rota, empresa, bilhete ou passageiro"
+                    placeholder="Rota, empresa, bilhete, país ou passageiro"
                   />
                 </div>
               </label>
@@ -1233,6 +1403,22 @@ export default function ReportsPanel() {
               </label>
 
               <label className="grid min-w-0 gap-2">
+                <span className="text-sm font-black text-navy">País/Moeda</span>
+                <select
+                  value={currencyFilter}
+                  onChange={(event) => setCurrencyFilter(event.target.value)}
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold text-navy outline-none focus:border-navy focus:ring-4 focus:ring-navy/10"
+                >
+                  <option value="ALL">Todas separadas</option>
+                  {currencyOptions.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {getCurrencyCountry(currency)} · {currency}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-black text-navy">Data inicial</span>
                 <input
                   type="date"
@@ -1252,7 +1438,7 @@ export default function ReportsPanel() {
                 />
               </label>
 
-              <div className="flex items-end lg:col-span-2">
+              <div className="flex items-end lg:col-span-3">
                 <button
                   type="button"
                   onClick={loadReports}
@@ -1266,13 +1452,7 @@ export default function ReportsPanel() {
           </section>
 
           <section className="grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              title="Receita estimada"
-              value={formatMoney(report.revenue, displayCurrency)}
-              description="Baseada nos bilhetes filtrados."
-              icon={WalletCards}
-              tone="green"
-            />
+            <CurrencySummaryCard rows={report.revenueByCurrency} />
             <MetricCard
               title="Rotas com receita"
               value={formatNumber(report.routeFinancial.length)}
@@ -1296,22 +1476,63 @@ export default function ReportsPanel() {
             />
           </section>
 
+          {currencyFilter === "ALL" && report.revenueByCurrency.length > 1 && (
+            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5">
+              <div className="flex gap-4">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700">
+                  <AlertTriangle size={23} strokeWidth={2.8} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-black text-amber-900">
+                    Relatório multi-país ativo
+                  </h3>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-amber-800">
+                    O painel não soma AOA com BRL. Cada gráfico financeiro é separado por moeda. Para comparação direta, use o filtro País/Moeda.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
             <SectionHeading
               number="01"
               title="Financeiro por rota"
-              description="Ranking limpo das rotas que mais geram receita no período filtrado."
+              description="Ranking das rotas que mais geram receita, sempre separado por país/moeda."
               icon={RouteIcon}
             />
 
             <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_0.95fr]">
-              <InsightCard title="Receita por rota" icon={WalletCards}>
-                <HorizontalBarList
-                  rows={routeFinancialRows}
-                  emptyText="Nenhuma rota com receita no filtro atual."
-                  valueFormatter={(value) => formatMoney(value, displayCurrency)}
-                />
-              </InsightCard>
+              <div className="grid min-w-0 gap-6">
+                {visibleRouteCurrencies.length === 0 ? (
+                  <InsightCard title="Receita por rota" icon={WalletCards}>
+                    <EmptyState>Nenhuma rota com receita no filtro atual.</EmptyState>
+                  </InsightCard>
+                ) : (
+                  visibleRouteCurrencies.map((currency) => {
+                    const rows = routeGroups[currency].slice(0, 8).map((item) => ({
+                      label: item.route,
+                      value: item.revenue,
+                      displayValue: formatMoney(item.revenue, item.currency),
+                      description: `${item.country} · ${formatNumber(item.tickets)} bilhetes · ${formatNumber(item.boardings)} embarques`
+                    }));
+
+                    return (
+                      <InsightCard
+                        key={currency}
+                        title={`Receita por rota · ${currency}`}
+                        icon={WalletCards}
+                      >
+                        <HorizontalBarList
+                          rows={rows}
+                          emptyText="Nenhuma rota com receita."
+                          valueFormatter={(value) => formatMoney(value, currency)}
+                        />
+                      </InsightCard>
+                    );
+                  })
+                )}
+              </div>
 
               <InsightCard title="Ranking financeiro" icon={BarChart3}>
                 <ReportTable
@@ -1327,17 +1548,38 @@ export default function ReportsPanel() {
             <SectionHeading
               number="02"
               title="Gráficos por período"
-              description="Evolução da receita estimada por data, sem excesso de indicadores na tela."
+              description="Evolução da receita estimada por data, separada por moeda para não misturar países."
               icon={TrendingUp}
             />
 
-            <InsightCard title="Receita por período" icon={CalendarClock}>
-              <PeriodBarChart
-                rows={revenuePeriodRows}
-                emptyText="Nenhuma receita encontrada no período selecionado."
-                valueFormatter={(value) => formatMoney(value, displayCurrency)}
-              />
-            </InsightCard>
+            <div className="grid min-w-0 gap-6 xl:grid-cols-2">
+              {visiblePeriodCurrencies.length === 0 ? (
+                <InsightCard title="Receita por período" icon={CalendarClock}>
+                  <EmptyState>Nenhuma receita encontrada no período selecionado.</EmptyState>
+                </InsightCard>
+              ) : (
+                visiblePeriodCurrencies.map((currency) => {
+                  const rows = periodGroups[currency].slice(-12).map((item) => ({
+                    ...item,
+                    displayValue: formatMoney(item.value, currency)
+                  }));
+
+                  return (
+                    <InsightCard
+                      key={currency}
+                      title={`Receita por período · ${currency}`}
+                      icon={CalendarClock}
+                    >
+                      <PeriodBarChart
+                        rows={rows}
+                        emptyText="Nenhuma receita encontrada."
+                        valueFormatter={(value) => formatMoney(value, currency)}
+                      />
+                    </InsightCard>
+                  );
+                })
+              )}
+            </div>
           </section>
 
           <section className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
@@ -1349,13 +1591,36 @@ export default function ReportsPanel() {
             />
 
             <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_0.95fr]">
-              <InsightCard title="Empresas por receita" icon={Building2}>
-                <HorizontalBarList
-                  rows={companyRevenueRows}
-                  emptyText="Nenhuma empresa com receita no filtro atual."
-                  valueFormatter={(value) => formatMoney(value, displayCurrency)}
-                />
-              </InsightCard>
+              <div className="grid min-w-0 gap-6">
+                {visibleCompanyCurrencies.length === 0 ? (
+                  <InsightCard title="Empresas por receita" icon={Building2}>
+                    <EmptyState>Nenhuma empresa com receita no filtro atual.</EmptyState>
+                  </InsightCard>
+                ) : (
+                  visibleCompanyCurrencies.map((currency) => {
+                    const rows = companyGroups[currency].slice(0, 8).map((item) => ({
+                      label: item.company,
+                      value: item.revenue,
+                      displayValue: formatMoney(item.revenue, item.currency),
+                      description: `${item.country} · ${formatNumber(item.tickets)} bilhetes · ${formatNumber(item.boardings)} embarques`
+                    }));
+
+                    return (
+                      <InsightCard
+                        key={currency}
+                        title={`Empresas por receita · ${currency}`}
+                        icon={Building2}
+                      >
+                        <HorizontalBarList
+                          rows={rows}
+                          emptyText="Nenhuma empresa com receita."
+                          valueFormatter={(value) => formatMoney(value, currency)}
+                        />
+                      </InsightCard>
+                    );
+                  })
+                )}
+              </div>
 
               <InsightCard title="Ranking das empresas" icon={TicketCheck}>
                 <ReportTable
@@ -1378,7 +1643,10 @@ export default function ReportsPanel() {
             <div className="grid min-w-0 gap-6 xl:grid-cols-[1fr_0.95fr]">
               <InsightCard title="Movimento diário" icon={TrendingUp}>
                 <PeriodBarChart
-                  rows={boardingDayRows}
+                  rows={report.boardingsByDate.slice(-12).map((item) => ({
+                    ...item,
+                    displayValue: `${formatNumber(item.value)} embarques`
+                  }))}
                   emptyText="Nenhum embarque encontrado no período selecionado."
                   valueFormatter={(value) => `${formatNumber(value)} emb.`}
                 />
@@ -1402,10 +1670,10 @@ export default function ReportsPanel() {
 
               <div className="min-w-0">
                 <h3 className="text-lg font-black text-blue-900">
-                  Módulo 67 aplicado
+                  Módulo 67 ajustado para multi-país
                 </h3>
                 <p className="mt-1 text-sm font-semibold leading-6 text-blue-800">
-                  A tela foi reorganizada para leitura profissional, com foco nos quatro blocos definidos e sem excesso de informação visual.
+                  BRL e AOA agora ficam separados na tela, no CSV e no PDF. Isso evita soma incorreta entre Brasil e Angola.
                 </p>
               </div>
             </div>
