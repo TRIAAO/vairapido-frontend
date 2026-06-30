@@ -15,7 +15,8 @@ import {
   UserRound,
   MessageCircle,
   Globe2,
-  History
+  History,
+  Siren
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -115,6 +116,12 @@ const links = [
     label: "Auditoria",
     path: "/auditoria",
     icon: History,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Ocorrências",
+    path: "/ocorrencias",
+    icon: Siren,
     allowedRoles: managementRoles
   },
   {
