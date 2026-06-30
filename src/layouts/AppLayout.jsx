@@ -11,7 +11,8 @@ import {
   Route as RouteIcon,
   CalendarClock,
   WalletCards,
-  TicketCheck
+  TicketCheck,
+  UserRound
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -87,6 +88,12 @@ const links = [
     label: "Bilhetes",
     path: "/bilhetes",
     icon: TicketCheck,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Passageiros",
+    path: "/passageiros",
+    icon: UserRound,
     allowedRoles: managementRoles
   },
   {
