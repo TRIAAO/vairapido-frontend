@@ -12,7 +12,8 @@ import {
   CalendarClock,
   WalletCards,
   TicketCheck,
-  UserRound
+  UserRound,
+  MessageCircle
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -94,6 +95,12 @@ const links = [
     label: "Passageiros",
     path: "/passageiros",
     icon: UserRound,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "WhatsApp",
+    path: "/whatsapp",
+    icon: MessageCircle,
     allowedRoles: managementRoles
   },
   {
