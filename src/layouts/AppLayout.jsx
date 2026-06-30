@@ -16,7 +16,8 @@ import {
   MessageCircle,
   Globe2,
   History,
-  Siren
+  Siren,
+  Cloud
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -104,6 +105,12 @@ const links = [
     label: "WhatsApp",
     path: "/whatsapp",
     icon: MessageCircle,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "WhatsApp Cloud",
+    path: "/whatsapp-cloud",
+    icon: Cloud,
     allowedRoles: managementRoles
   },
   {

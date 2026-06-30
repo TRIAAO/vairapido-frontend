@@ -41,6 +41,21 @@ export async function backfillMissingWhatsAppMessages() {
   return response.data;
 }
 
+export async function getWhatsAppCloudStatus() {
+  const response = await api.get("/api/v1/whatsapp/cloud/status");
+  return response.data;
+}
+
+export async function sendRealWhatsAppMessage(messageId) {
+  const response = await api.post(`/api/v1/whatsapp/messages/${messageId}/send-real`);
+  return response.data;
+}
+
+export async function sendPendingRealWhatsAppMessages() {
+  const response = await api.post("/api/v1/whatsapp/messages/send-pending-real");
+  return normalizeList(response.data);
+}
+
 export async function listWhatsAppMessages() {
   const response = await api.get("/api/v1/whatsapp/messages");
   return normalizeList(response.data);
