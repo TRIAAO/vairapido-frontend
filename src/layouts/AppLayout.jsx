@@ -10,7 +10,8 @@ import {
   Building2,
   Route as RouteIcon,
   CalendarClock,
-  WalletCards
+  WalletCards,
+  TicketCheck
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../utils/auth";
@@ -80,6 +81,12 @@ const links = [
     label: "Pagamentos",
     path: "/pagamentos",
     icon: WalletCards,
+    allowedRoles: managementRoles
+  },
+  {
+    label: "Bilhetes",
+    path: "/bilhetes",
+    icon: TicketCheck,
     allowedRoles: managementRoles
   },
   {
