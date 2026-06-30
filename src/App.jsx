@@ -14,6 +14,7 @@ import TicketsPanel from "./pages/TicketsPanel";
 import PassengersPanel from "./pages/PassengersPanel";
 import WhatsAppPanel from "./pages/WhatsAppPanel";
 import WhatsAppCloudPanel from "./pages/WhatsAppCloudPanel";
+import WhatsAppPendingSafetyPanel from "./pages/WhatsAppPendingSafetyPanel";
 import CountrySettingsPanel from "./pages/CountrySettingsPanel";
 import AuditPanel from "./pages/AuditPanel";
 import IncidentsPanel from "./pages/IncidentsPanel";
@@ -22,15 +23,40 @@ import Login from "./pages/Login";
 import UsersPanel from "./pages/UsersPanel";
 import { isAuthenticated } from "./utils/auth";
 
-const allBackofficeRoles = ["ADMIN", "ROLE_ADMIN", "COMPANY_ADMIN", "ROLE_COMPANY_ADMIN", "OPERATOR", "ROLE_OPERATOR"];
-const managementRoles = ["ADMIN", "ROLE_ADMIN", "COMPANY_ADMIN", "ROLE_COMPANY_ADMIN"];
+const allBackofficeRoles = [
+  "ADMIN",
+  "ROLE_ADMIN",
+  "COMPANY_ADMIN",
+  "ROLE_COMPANY_ADMIN",
+  "OPERATOR",
+  "ROLE_OPERATOR"
+];
+
+const managementRoles = [
+  "ADMIN",
+  "ROLE_ADMIN",
+  "COMPANY_ADMIN",
+  "ROLE_COMPANY_ADMIN"
+];
+
 const adminOnlyRoles = ["ADMIN", "ROLE_ADMIN"];
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+      <Route
+        path="/"
+        element={
+          isAuthenticated() ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+
       <Route path="/login" element={<Login />} />
+
       <Route element={<ProtectedRoute allowedRoles={allBackofficeRoles} />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -39,6 +65,7 @@ export default function App() {
           <Route path="/operador" element={<OperatorPanel />} />
         </Route>
       </Route>
+
       <Route element={<ProtectedRoute allowedRoles={managementRoles} />}>
         <Route element={<AppLayout />}>
           <Route path="/empresas" element={<CompaniesPanel />} />
@@ -50,16 +77,34 @@ export default function App() {
           <Route path="/passageiros" element={<PassengersPanel />} />
           <Route path="/whatsapp" element={<WhatsAppPanel />} />
           <Route path="/whatsapp-cloud" element={<WhatsAppCloudPanel />} />
+          <Route path="/whatsapp-pendencias" element={<WhatsAppPendingSafetyPanel />} />
           <Route path="/configuracoes-pais" element={<CountrySettingsPanel />} />
           <Route path="/auditoria" element={<AuditPanel />} />
           <Route path="/ocorrencias" element={<IncidentsPanel />} />
           <Route path="/relatorios" element={<ReportsPanel />} />
         </Route>
       </Route>
+
       <Route element={<ProtectedRoute allowedRoles={adminOnlyRoles} />}>
-        <Route element={<AppLayout />}><Route path="/usuarios" element={<UsersPanel />} /></Route>
+        <Route element={<AppLayout />}>
+          <Route path="/usuarios" element={<UsersPanel />} />
+        </Route>
       </Route>
-      <Route path="/sem-permissao" element={<div className="grid min-h-screen place-items-center bg-slate-100 p-6"><div className="max-w-lg rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-soft"><h1 className="text-3xl font-black text-navy">Acesso negado</h1><p className="mt-3 text-slate-500">Seu usuário não possui permissão para acessar este painel.</p></div></div>} />
+
+      <Route
+        path="/sem-permissao"
+        element={
+          <div className="grid min-h-screen place-items-center bg-slate-100 p-6">
+            <div className="max-w-lg rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-soft">
+              <h1 className="text-3xl font-black text-navy">Acesso negado</h1>
+              <p className="mt-3 text-slate-500">
+                Seu usuário não possui permissão para acessar este painel.
+              </p>
+            </div>
+          </div>
+        }
+      />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -51,9 +51,9 @@ export async function sendRealWhatsAppMessage(messageId) {
   return response.data;
 }
 
-export async function sendPendingRealWhatsAppMessages() {
-  const response = await api.post("/api/v1/whatsapp/messages/send-pending-real");
-  return normalizeList(response.data);
+export async function sendPendingRealWhatsAppMessages(payload = {}) {
+  const response = await api.post("/api/v1/whatsapp/messages/send-pending-real", payload);
+  return response.data;
 }
 
 export async function listWhatsAppMessages() {
